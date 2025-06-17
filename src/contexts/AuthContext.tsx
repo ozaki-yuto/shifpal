@@ -32,51 +32,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clearSession = async () => {
     setUser(null);
     setSession(null);
-    // Clear any stored session data
-    await supabase.auth.signOut();
+    setLoading(false);
+    // Clear any stored session data without making API calls
+    try {
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.clear();
+    } catch (error) {
+      console.warn('Failed to clear storage:', error);
+    }
   };
 
   useEffect(() => {
-    // Get initial session with error handling
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Clear any invalid tokens first
+        await clearSession();
         
-        if (error) {
-          console.warn('Error getting session:', error.message);
-          await clearSession();
-          setLoading(false);
-          return;
-        }
-
-        setSession(session);
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
-        } else {
-          setLoading(false);
-        }
+        // Set loading to false immediately to show login page
+        setLoading(false);
       } catch (error) {
         console.error('Failed to initialize auth:', error);
-        await clearSession();
+        clearSession();
         setLoading(false);
       }
     };
 
     initializeAuth();
 
-    // Listen for auth changes with error handling
+    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          // Token refresh failed, clear session
-          await clearSession();
-          setLoading(false);
-          return;
-        }
-
-        if (event === 'SIGNED_OUT' || !session) {
+        if (event === 'SIGNED_OUT' || !session || event === 'TOKEN_REFRESHED' && !session) {
           setUser(null);
           setSession(null);
           setLoading(false);
@@ -92,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Auth state change error:', error);
-        await clearSession();
+        clearSession();
         setLoading(false);
       }
     });
@@ -102,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -110,12 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching user profile:', error);
-        // If it's an auth error, clear the session
-        if (error.message.includes('JWT') || error.message.includes('token')) {
-          await clearSession();
-        } else {
-          setUser(null);
-        }
+        setUser(null);
+        setLoading(false);
       } else {
         if (data && data.length > 0) {
           setUser({
@@ -127,23 +112,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setUser(null);
         }
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setUser(null);
-    } finally {
       setLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
+    setLoading(true);
+    try {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
-      // Provide more user-friendly error messages
       if (error.message.includes('Invalid login credentials')) {
         throw new Error('メールアドレスまたはパスワードが正しくありません');
       } else if (error.message.includes('Email not confirmed')) {
@@ -152,9 +138,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('ログインに失敗しました。しばらく時間をおいて再度お試しください。');
       }
     }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signUp = async (email: string, password: string, name: string, role: 'admin' | 'staff') => {
+    setLoading(true);
+    try {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -165,7 +156,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (data.user) {
-      // Create user profile
       const { error: profileError } = await supabase
         .from('users')
         .insert({
@@ -179,15 +169,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw profileError;
       }
     }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signOut = async () => {
+    setLoading(true);
+    try {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.warn('Sign out error:', error.message);
-      // Even if sign out fails, clear local state
     }
-    await clearSession();
+    } finally {
+      clearSession();
+    }
   };
 
   const resetPassword = async (email: string) => {
