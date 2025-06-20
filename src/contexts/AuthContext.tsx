@@ -26,7 +26,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Clear invalid session data
   const clearSession = async () => {
@@ -43,9 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Set loading to false immediately to show login page
-    setLoading(false);
-
     // Listen for auth changes
     const {
       data: { subscription },
@@ -54,7 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (event === 'SIGNED_OUT' || !session || event === 'TOKEN_REFRESHED' && !session) {
           setUser(null);
           setSession(null);
-          setLoading(false);
           return;
         }
 
@@ -63,12 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetchUserProfile(session.user.id);
         } else {
           setUser(null);
-          setLoading(false);
         }
       } catch (error) {
         console.error('Auth state change error:', error);
         clearSession();
-        setLoading(false);
       }
     });
 
@@ -77,7 +71,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -87,7 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('Error fetching user profile:', error);
         setUser(null);
-        setLoading(false);
       } else {
         if (data && data.length > 0) {
           setUser({
@@ -99,17 +91,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setUser(null);
         }
-        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setUser(null);
-      setLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    setLoading(true);
     try {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -126,12 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     } finally {
-      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, name: string, role: 'admin' | 'staff') => {
-    setLoading(true);
     try {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -157,12 +144,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     } finally {
-      setLoading(false);
     }
   };
 
   const signOut = async () => {
-    setLoading(true);
     try {
     const { error } = await supabase.auth.signOut();
     if (error) {
