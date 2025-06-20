@@ -42,6 +42,11 @@ export function generateShiftsWithDetails(
   console.log('Generating shifts with requirements:', requirements);
   console.log('Generating shifts with preferences:', preferences);
   
+  // 詳細なデバッグ情報
+  console.log('=== SHIFT GENERATION DEBUG ===');
+  console.log('Requirements:', JSON.stringify(requirements, null, 2));
+  console.log('Preferences:', JSON.stringify(preferences, null, 2));
+  
   const assignments: ShiftAssignment[] = [];
   const staffFulfillment: Map<string, StaffFulfillment> = new Map();
   const warnings: string[] = [];
@@ -82,6 +87,7 @@ export function generateShiftsWithDetails(
   const preferencesBySlot = groupPreferencesBySlot(preferences);
   
   console.log('Preferences by slot:', preferencesBySlot);
+  console.log('Preferences by slot (detailed):', Array.from(preferencesBySlot.entries()));
 
   // ステップ1: 確定処理（希望者数 ≤ 必要人数）
   const confirmedSlots = new Set<string>();
@@ -89,18 +95,22 @@ export function generateShiftsWithDetails(
     const key = `${req.dayOfWeek}-${req.timeSlot}`;
     const candidatePrefs = preferencesBySlot.get(key) || [];
     
-    console.log(`Processing ${key}: ${candidatePrefs.length} candidates for ${req.requiredStaff} required`);
+    console.log(`Processing ${key}: ${candidatePrefs.length} candidates for ${req.requiredStaff} required`, candidatePrefs);
 
     if (candidatePrefs.length <= req.requiredStaff) {
       // 全員確定
       candidatePrefs.forEach(pref => {
-        if (isValidAssignment(pref, assignments)) {
+        const isValid = isValidAssignment(pref, assignments);
+        console.log(`Checking assignment for ${getStaffName(pref.staffId)} to ${key}: valid=${isValid}`);
+        
+        if (isValid) {
           const assignment = createShiftAssignment(pref, req.dayOfWeek, req.timeSlot);
           assignments.push(assignment);
           updateFulfillment(staffFulfillment, pref.staffId, req.dayOfWeek);
           confirmedSlots.add(key);
           console.log(`Assigned ${getStaffName(pref.staffId)} to ${key}`);
         } else {
+          console.log(`Failed to assign ${getStaffName(pref.staffId)} to ${key} due to constraints`);
           warnings.push(`${getStaffName(pref.staffId)}の${getDayLabel(req.dayOfWeek)}${getTimeSlotLabel(req.timeSlot)}は制約により割り当てできませんでした`);
         }
       });

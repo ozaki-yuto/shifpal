@@ -206,9 +206,24 @@ export function useShiftAssignments() {
   const createAssignments = async (newAssignments: ShiftAssignment[]) => {
     try {
       console.log('Creating assignments:', newAssignments);
+      console.log('Assignment count:', newAssignments.length);
+      
+      if (newAssignments.length === 0) {
+        console.warn('No assignments to create');
+        return;
+      }
       
       // Clear existing assignments
-      await supabase.from('shift_assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      const { error: deleteError } = await supabase
+        .from('shift_assignments')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+      } else {
+        console.log('Cleared existing assignments');
+      }
 
       // Insert new assignments
       const insertData = newAssignments.map(assignment => ({

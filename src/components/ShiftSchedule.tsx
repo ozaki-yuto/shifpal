@@ -22,8 +22,30 @@ export function ShiftSchedule({ shifts, userRole, userId, onGenerateShifts, requ
     console.log('Requirements:', requirements);
     console.log('Preferences:', preferences);
     
+    // デバッグ情報を詳細に出力
+    console.log('Requirements count:', requirements.length);
+    console.log('Preferences count:', preferences.length);
+    console.log('Current user:', userId);
+    console.log('User role:', userRole);
+    
+    if (requirements.length === 0) {
+      alert('⚠️ シフト要件が設定されていません。\n「シフト要件設定」で必要人数を設定してください。');
+      return;
+    }
+    
+    if (preferences.length === 0) {
+      alert('⚠️ スタッフのシフト希望が提出されていません。\n「シフト希望提出」で希望を入力してください。');
+      return;
+    }
+    
     const result = generateShiftsWithDetails(requirements, preferences);
     console.log('Generation result:', result);
+    
+    if (result.assignments.length === 0) {
+      alert('⚠️ シフトを生成できませんでした。\n\n考えられる原因:\n• シフト要件と希望が一致しない\n• 制約により割り当てできない\n\nコンソールで詳細を確認してください。');
+    } else {
+      alert(`✅ ${result.assignments.length}件のシフトを生成しました！`);
+    }
     
     setGenerationResult(result);
     setShowGenerationDetails(true);

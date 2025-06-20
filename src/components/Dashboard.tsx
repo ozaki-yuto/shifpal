@@ -9,6 +9,8 @@ interface DashboardProps {
 }
 
 export function Dashboard({ userRole, userId, shifts }: DashboardProps) {
+  console.log('Dashboard - userRole:', userRole, 'userId:', userId, 'shifts count:', shifts.length);
+  
   const today = new Date();
   const thisWeekShifts = shifts.filter(shift => {
     const shiftDate = new Date(shift.date);
