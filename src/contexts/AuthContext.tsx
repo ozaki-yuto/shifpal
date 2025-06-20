@@ -43,21 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Clear any invalid tokens first
-        await clearSession();
-        
-        // Set loading to false immediately to show login page
-        setLoading(false);
-      } catch (error) {
-        console.error('Failed to initialize auth:', error);
-        clearSession();
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
+    // Set loading to false immediately to show login page
+    setLoading(false);
 
     // Listen for auth changes
     const {
